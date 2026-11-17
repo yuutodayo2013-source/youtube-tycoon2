@@ -1,0 +1,1675 @@
+```html
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTubeタイクーン - クリエイターズ・スタジオ</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Noto Sans JP & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <!-- Font Awesome for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- Tone.js for procedural sound effects -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Noto Sans JP"', 'Inter', 'sans-serif'],
+            num: ['Inter', '"Noto Sans JP"', 'sans-serif'],
+          },
+          colors: {
+            yt: {
+              red: '#FF0000',
+              darkRed: '#CC0000',
+              black: '#0F0F0F',
+              darkCard: '#1F1F1F',
+              darkHover: '#2A2A2A',
+              lightBg: '#F9F9F9',
+              lightCard: '#FFFFFF',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* カスタムアニメーションとゲーム用スタイル */
+    @keyframes floatUp {
+      0% {
+        opacity: 1;
+        transform: translate(-50%, 0) scale(0.8);
+      }
+      50% {
+        opacity: 1;
+        transform: translate(-50%, -45px) scale(1.15);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -85px) scale(0.95);
+      }
+    }
+
+    .floating-text {
+      position: fixed;
+      pointer-events: none;
+      font-weight: 900;
+      z-index: 9999;
+      animation: floatUp 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+      user-select: none;
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% {
+        box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.45);
+      }
+      50% {
+        box-shadow: 0 0 0 12px rgba(255, 0, 0, 0);
+      }
+    }
+
+    .btn-upload-glow {
+      animation: pulseGlow 2.2s infinite;
+    }
+
+    .btn-upload-active:active {
+      transform: scale(0.94);
+    }
+
+    @keyframes slideInComment {
+      0% {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .comment-item {
+      animation: slideInComment 0.3s ease-out forwards;
+    }
+
+    /* カスタムスクロールバー */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(156, 163, 175, 0.4);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(156, 163, 175, 0.7);
+    }
+
+    /* 紙吹雪エフェクト用 */
+    .confetti-piece {
+      position: fixed;
+      width: 10px;
+      height: 10px;
+      z-index: 9998;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body class="bg-yt-lightBg text-gray-900 dark:bg-yt-black dark:text-gray-100 transition-colors duration-200 min-h-screen flex flex-col select-none">
+
+  <!-- ヘッダーナビゲーション（YouTube Studio風） -->
+  <header class="sticky top-0 z-40 bg-white/95 dark:bg-yt-darkCard/95 backdrop-blur border-b border-gray-200 dark:border-gray-800 px-3 sm:px-6 py-2.5 shadow-sm">
+    <div class="max-w-7xl mx-auto flex items-center justify-between gap-2">
+      <!-- ロゴ -->
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-7 bg-yt-red rounded-lg flex items-center justify-center shadow-sm">
+          <i class="fa-solid fa-play text-white text-xs ml-0.5"></i>
+        </div>
+        <div>
+          <h1 class="font-black text-base sm:text-lg tracking-tight leading-none flex items-center gap-1.5">
+            <span>YouTube</span>
+            <span class="text-yt-red">タイクーン</span>
+          </h1>
+          <p class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 font-medium">Creator Studio Tycoon</p>
+        </div>
+      </div>
+
+      <!-- クリエイターの盾コレクション（ミニバッジ表示） -->
+      <div class="hidden md:flex items-center gap-2 bg-gray-100 dark:bg-yt-black px-3 py-1.5 rounded-full border border-gray-200 dark:border-gray-800" id="header-plaques">
+        <span class="text-xs font-bold text-gray-500 dark:text-gray-400 mr-1">盾:</span>
+        <!-- JSで動的に描画 -->
+      </div>
+
+      <!-- コントロールボタン群 -->
+      <div class="flex items-center gap-1.5 sm:gap-2">
+        <!-- 数値表記切替（日本語単位 / カンマ区切り） -->
+        <button id="btn-format-toggle" onclick="toggleNumberFormat()" title="数値表記の切り替え（万・億 / カンマ）"
+          class="px-2.5 py-1.5 rounded-full text-xs font-bold bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 transition">
+          <i class="fa-solid fa-arrow-90deg-right mr-1 text-yt-red"></i><span id="format-label">万・億表記</span>
+        </button>
+
+        <!-- サウンド切替 -->
+        <button id="btn-sound-toggle" onclick="toggleSound()" title="効果音 ON/OFF"
+          class="w-8 h-8 rounded-full flex items-center justify-center bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 transition">
+          <i id="sound-icon" class="fa-solid fa-volume-high text-xs"></i>
+        </button>
+
+        <!-- ダークモード切替 -->
+        <button id="btn-theme-toggle" onclick="toggleTheme()" title="ダークモード切り替え"
+          class="w-8 h-8 rounded-full flex items-center justify-center bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 transition">
+          <i id="theme-icon" class="fa-solid fa-moon text-xs"></i>
+        </button>
+
+        <!-- セーブ＆リセットメニュー -->
+        <button onclick="openSettingsModal()" title="データ管理・設定"
+          class="w-8 h-8 rounded-full flex items-center justify-center bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 transition">
+          <i class="fa-solid fa-gear text-xs"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 基本ステータスバー（画面上部に大きく表示） -->
+  <section class="bg-white dark:bg-yt-darkCard border-b border-gray-200 dark:border-gray-800 shadow-sm">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 py-3 sm:py-4">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+        
+        <!-- チャンネル登録者数 -->
+        <div class="bg-gradient-to-br from-red-50 to-white dark:from-red-950/30 dark:to-yt-darkHover p-3 sm:p-4 rounded-2xl border border-red-100 dark:border-red-900/40 relative overflow-hidden">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-bold text-gray-600 dark:text-gray-300 flex items-center gap-1.5">
+              <i class="fa-solid fa-users text-yt-red"></i>チャンネル登録者
+            </span>
+            <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/50 text-yt-red font-num" id="stat-subs-rate">
+              +1 人/秒
+            </span>
+          </div>
+          <div class="text-xl sm:text-2xl lg:text-3xl font-black font-num tracking-tight text-gray-900 dark:text-white truncate" id="stat-subs">
+            0<span class="text-sm font-bold ml-1">人</span>
+          </div>
+        </div>
+
+        <!-- 所持金 -->
+        <div class="bg-gradient-to-br from-amber-50 to-white dark:from-amber-950/30 dark:to-yt-darkHover p-3 sm:p-4 rounded-2xl border border-amber-100 dark:border-amber-900/40 relative overflow-hidden">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-bold text-gray-600 dark:text-gray-300 flex items-center gap-1.5">
+              <i class="fa-solid fa-coins text-amber-500"></i>現在の所持金
+            </span>
+            <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400 font-num" id="stat-money-rate">
+              +10 円/秒
+            </span>
+          </div>
+          <div class="text-xl sm:text-2xl lg:text-3xl font-black font-num tracking-tight text-gray-900 dark:text-white truncate" id="stat-money">
+            0<span class="text-sm font-bold ml-1">円</span>
+          </div>
+        </div>
+
+        <!-- 無料投稿パワー -->
+        <div class="bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/30 dark:to-yt-darkHover p-3 sm:p-4 rounded-2xl border border-blue-100 dark:border-blue-900/40">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-bold text-gray-600 dark:text-gray-300 flex items-center gap-1.5">
+              <i class="fa-solid fa-bolt text-blue-500"></i>無料投稿パワー
+            </span>
+            <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-num" id="stat-multiplier">
+              倍率 1x
+            </span>
+          </div>
+          <div class="text-lg sm:text-xl lg:text-2xl font-black font-num tracking-tight text-blue-600 dark:text-blue-400 truncate" id="stat-click-power">
+            +1 <span class="text-xs font-bold">円/秒 UP</span>
+          </div>
+        </div>
+
+        <!-- チャンネルランク & 次の盾 -->
+        <div class="bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/30 dark:to-yt-darkHover p-3 sm:p-4 rounded-2xl border border-purple-100 dark:border-purple-900/40 flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-bold text-gray-600 dark:text-gray-300 flex items-center gap-1.5">
+              <i class="fa-solid fa-award text-purple-500"></i>次の盾目標
+            </span>
+            <span class="text-[11px] font-bold text-purple-600 dark:text-purple-400 font-num" id="next-plaque-name">
+              銀の盾 (10万人)
+            </span>
+          </div>
+          <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden my-1">
+            <div id="next-plaque-bar" class="bg-gradient-to-r from-yt-red to-purple-500 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+          </div>
+          <div class="flex justify-between text-[10px] font-bold text-gray-500 dark:text-gray-400">
+            <span id="channel-rank-title">駆け出し投稿者</span>
+            <span id="next-plaque-percent" class="font-num">0.0%</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- メインコンテンツエリア -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-6 grid grid-cols-1 lg:grid-cols-12 gap-5">
+    
+    <!-- 左カラム：メインアクション（無料投稿ボタン）＆ チャンネルスタジオ・コメント欄 -->
+    <div class="lg:col-span-5 flex flex-col gap-4">
+      
+      <!-- 動画投稿スタジオカード -->
+      <div class="bg-white dark:bg-yt-darkCard rounded-3xl p-5 sm:p-6 shadow-md border border-gray-200 dark:border-gray-800 flex flex-col items-center text-center relative overflow-hidden">
+        <!-- 装飾背景 -->
+        <div class="absolute -top-16 -right-16 w-40 h-40 bg-red-500/5 rounded-full pointer-events-none"></div>
+        <div class="absolute -bottom-16 -left-16 w-40 h-40 bg-red-500/5 rounded-full pointer-events-none"></div>
+
+        <!-- チャンネルアイコン＆ステータス -->
+        <div class="flex items-center gap-3 mb-4 w-full bg-gray-50 dark:bg-yt-black/60 p-3 rounded-2xl border border-gray-100 dark:border-gray-800">
+          <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-yt-red to-rose-500 flex items-center justify-center text-white text-xl font-black shadow-md shrink-0">
+            <i class="fa-solid fa-video"></i>
+          </div>
+          <div class="text-left flex-1 min-w-0">
+            <div class="flex items-center gap-1.5">
+              <span class="font-black text-sm sm:text-base truncate" id="channel-name-display">マイチャンネル公式</span>
+              <i id="verified-badge" class="fa-solid fa-circle-check text-gray-400 text-xs" title="登録者10万人で認証バッジ獲得"></i>
+            </div>
+            <p class="text-xs text-gray-500 dark:text-gray-400 truncate" id="latest-video-title">最新動画：「初めての自己紹介動画！」</p>
+          </div>
+          <div class="text-right shrink-0">
+            <span class="text-[10px] text-gray-400 block">総投稿数</span>
+            <span class="font-black font-num text-sm text-gray-800 dark:text-gray-200" id="stat-total-videos">0本</span>
+          </div>
+        </div>
+
+        <!-- メインアクション「無料投稿ボタン」 -->
+        <div class="my-2 sm:my-4 w-full flex flex-col items-center">
+          <button id="btn-free-upload"
+            class="btn-upload-glow btn-upload-active group relative w-full max-w-sm py-5 sm:py-6 px-6 rounded-3xl bg-gradient-to-b from-yt-red to-yt-darkRed hover:from-red-500 hover:to-red-700 text-white shadow-xl shadow-red-600/25 border-b-4 border-red-900 transition-all duration-100 cursor-pointer flex flex-col items-center justify-center gap-1.5 touch-manipulation">
+            <div class="flex items-center gap-2.5 text-lg sm:text-xl font-black tracking-wide">
+              <i class="fa-solid fa-cloud-arrow-up text-2xl group-hover:-translate-y-0.5 transition-transform"></i>
+              <span>動画を無料投稿する！</span>
+            </div>
+            <div class="text-xs sm:text-sm font-bold bg-black/25 px-3.5 py-1 rounded-full text-red-100 font-num">
+              クリックで秒間収益 <span id="btn-power-text" class="text-yellow-300 font-black">+1 円/秒</span> UP!
+            </div>
+          </button>
+          <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-2.5">
+            <i class="fa-solid fa-hand-pointer mr-1 text-yt-red"></i>連打して秒間収益を増やし、優秀な編集者を雇おう！
+          </p>
+        </div>
+
+        <!-- クリエイターの盾 ショーケース -->
+        <div class="w-full mt-2 pt-3 border-t border-gray-100 dark:border-gray-800">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-gray-600 dark:text-gray-400">
+              <i class="fa-solid fa-trophy text-amber-500 mr-1"></i>獲得したクリエイターの盾
+            </span>
+            <span class="text-[11px] text-gray-400" id="plaque-count-text">0 / 4 獲得</span>
+          </div>
+          <div class="grid grid-cols-4 gap-2" id="plaques-showcase">
+            <!-- JSで4種類の盾カードを生成 -->
+          </div>
+        </div>
+      </div>
+
+      <!-- リアルタイム視聴者コメント欄（ティッカー＆ログ） -->
+      <div class="bg-white dark:bg-yt-darkCard rounded-3xl p-4 sm:p-5 shadow-md border border-gray-200 dark:border-gray-800 flex-1 flex flex-col min-h-[210px]">
+        <div class="flex items-center justify-between mb-3 pb-2 border-b border-gray-100 dark:border-gray-800">
+          <h2 class="font-black text-sm flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-yt-red animate-ping"></span>
+            <span>視聴者コメント欄（リアルタイム）</span>
+          </h2>
+          <span class="text-[11px] font-bold text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">LIVE</span>
+        </div>
+        <div id="comments-feed" class="flex-1 overflow-y-auto space-y-2.5 max-h-[220px] pr-1">
+          <!-- JSでコメントが追加される -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 右カラム：編集者の雇用 ＆ プロモーション（企業案件） -->
+    <div class="lg:col-span-7 flex flex-col">
+      <div class="bg-white dark:bg-yt-darkCard rounded-3xl shadow-md border border-gray-200 dark:border-gray-800 flex flex-col h-full overflow-hidden">
+        
+        <!-- タブ切り替えヘッダー -->
+        <div class="grid grid-cols-2 border-b border-gray-200 dark:border-gray-800 bg-gray-50/80 dark:bg-yt-black/40 p-1.5 gap-1.5">
+          <button id="tab-editors" onclick="switchTab('editors')"
+            class="py-2.5 px-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all bg-white dark:bg-yt-darkCard text-yt-red shadow-sm">
+            <i class="fa-solid fa-scissors"></i>
+            <span>編集者の雇用</span>
+            <span id="badge-editors-affordable" class="hidden px-1.5 py-0.5 text-[10px] rounded-full bg-yt-red text-white font-num">0</span>
+          </button>
+          <button id="tab-promos" onclick="switchTab('promos')"
+            class="py-2.5 px-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all text-gray-600 dark:text-gray-400 hover:bg-white/50 dark:hover:bg-yt-darkHover">
+            <i class="fa-solid fa-handshake"></i>
+            <span>企業案件 (PR)</span>
+            <span id="badge-promos-available" class="hidden px-1.5 py-0.5 text-[10px] rounded-full bg-amber-500 text-white font-num animate-bounce">NEW</span>
+          </button>
+        </div>
+
+        <!-- タブ1: 編集者リスト -->
+        <div id="panel-editors" class="p-3 sm:p-5 flex-1 overflow-y-auto space-y-2.5 max-h-[650px]">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-2 px-1">
+            <p class="text-xs text-gray-600 dark:text-gray-400 font-medium">
+              <i class="fa-solid fa-circle-info text-yt-red mr-1"></i>お金で編集者を雇うと<strong class="text-gray-900 dark:text-white">秒間の登録者増加数</strong>がアップ！
+            </p>
+            <!-- まとめ買い切替ボタン -->
+            <div class="flex items-center gap-1 bg-gray-100 dark:bg-yt-black p-1 rounded-xl">
+              <button onclick="setBuyMultiplier(1)" id="buy-mult-1" class="px-2.5 py-1 rounded-lg text-xs font-black bg-yt-red text-white transition">x1</button>
+              <button onclick="setBuyMultiplier(10)" id="buy-mult-10" class="px-2.5 py-1 rounded-lg text-xs font-black text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition">x10</button>
+            </div>
+          </div>
+
+          <div id="editors-list" class="space-y-2.5">
+            <!-- JSで編集者カードを生成 -->
+          </div>
+        </div>
+
+        <!-- タブ2: プロモーション（企業案件）リスト -->
+        <div id="panel-promos" class="hidden p-3 sm:p-5 flex-1 overflow-y-auto space-y-3 max-h-[650px]">
+          <div class="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-2xl p-3 mb-2">
+            <p class="text-xs text-amber-900 dark:text-amber-200 font-bold flex items-start gap-2">
+              <i class="fa-solid fa-bullhorn text-amber-500 mt-0.5"></i>
+              <span>チャンネル登録者数を増やして企業案件を受注しよう！案件を受けると<strong>無料投稿パワー（1クリックで増える秒間収益）が倍増</strong>し、特別ボーナス資金も獲得できます！</span>
+            </p>
+          </div>
+
+          <div id="promos-list" class="space-y-3">
+            <!-- JSでプロモーションカードを生成 -->
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- お祝い・通知トースト表示エリア -->
+  <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+  <!-- 設定・データ管理モーダル -->
+  <div id="settings-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="bg-white dark:bg-yt-darkCard rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-200 dark:border-gray-700">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-black flex items-center gap-2">
+          <i class="fa-solid fa-sliders text-yt-red"></i>
+          <span>チャンネル設定・データ管理</span>
+        </h3>
+        <button onclick="closeSettingsModal()" class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4">
+        <!-- チャンネル名変更 -->
+        <div>
+          <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">チャンネル名</label>
+          <div class="flex gap-2">
+            <input type="text" id="input-channel-name" maxlength="20" placeholder="マイチャンネル公式"
+              class="flex-1 px-3.5 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-yt-black text-sm font-bold focus:outline-none focus:border-yt-red">
+            <button onclick="saveChannelName()" class="px-4 py-2 rounded-xl bg-yt-red hover:bg-yt-darkRed text-white text-xs font-black transition">
+              変更
+            </button>
+          </div>
+        </div>
+
+        <!-- プレイ統計 -->
+        <div class="bg-gray-50 dark:bg-yt-black p-3.5 rounded-2xl border border-gray-200 dark:border-gray-800 text-xs space-y-1.5">
+          <div class="flex justify-between">
+            <span class="text-gray-500">累計獲得収益:</span>
+            <span class="font-bold font-num" id="modal-total-money">0 円</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-500">総動画投稿数:</span>
+            <span class="font-bold font-num" id="modal-total-videos">0 本</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-500">雇用した編集者合計:</span>
+            <span class="font-bold font-num" id="modal-total-editors">0 人</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-500">完了した企業案件:</span>
+            <span class="font-bold font-num" id="modal-total-promos">0 / 8 件</span>
+          </div>
+        </div>
+
+        <!-- セーブ＆リセット -->
+        <div class="pt-2 flex flex-col gap-2">
+          <button onclick="manualSave()" class="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-floppy-disk"></i>今すぐ手動セーブする（自動保存は10秒毎）
+          </button>
+
+          <div id="reset-confirm-box" class="pt-2 border-t border-gray-200 dark:border-gray-800">
+            <button id="btn-reset-step1" onclick="showResetConfirm()" class="w-full py-2.5 rounded-xl bg-gray-200 hover:bg-red-100 dark:bg-gray-800 dark:hover:bg-red-950/60 text-gray-700 dark:text-gray-300 hover:text-yt-red text-xs font-bold transition">
+              <i class="fa-solid fa-trash-can mr-1"></i>セーブデータを初期化（最初からやり直す）
+            </button>
+            <div id="reset-step2" class="hidden bg-red-50 dark:bg-red-950/40 p-3 rounded-xl border border-red-200 dark:border-red-900/50 text-center space-y-2">
+              <p class="text-xs font-bold text-yt-red">本当にすべてのデータを消去しますか？</p>
+              <div class="flex gap-2">
+                <button onclick="cancelResetConfirm()" class="flex-1 py-1.5 rounded-lg bg-gray-200 dark:bg-gray-700 text-xs font-bold">キャンセル</button>
+                <button onclick="executeReset()" class="flex-1 py-1.5 rounded-lg bg-yt-red text-white text-xs font-black">完全に初期化</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 盾達成お祝いモーダル -->
+  <div id="plaque-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+    <div class="bg-white dark:bg-yt-darkCard rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl border-2 border-amber-400 relative overflow-hidden">
+      <div class="text-xs font-black tracking-widest text-amber-500 uppercase mb-1">CONGRATULATIONS!</div>
+      <h3 class="text-xl font-black mb-3" id="plaque-modal-title">銀の盾 獲得！</h3>
+      <div id="plaque-modal-icon" class="w-24 h-24 mx-auto my-3 rounded-2xl flex items-center justify-center text-5xl shadow-lg">
+        🏆
+      </div>
+      <p class="text-sm text-gray-600 dark:text-gray-300 mb-5 font-medium" id="plaque-modal-desc">
+        チャンネル登録者10万人突破の証！YouTubeから記念の盾が贈られました！
+      </p>
+      <button onclick="closePlaqueModal()" class="w-full py-3 rounded-2xl bg-gradient-to-r from-yt-red to-rose-600 text-white font-black text-sm shadow-lg hover:opacity-95 transition">
+        やったー！受け取る
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // ゲームデータ定義（編集者・プロモーション・クリエイターの盾・動画タイトル）
+    // =========================================================================
+
+    const EDITORS_DATA = [
+      {
+        id: 'student',
+        name: '駆け出しの学生編集者',
+        desc: 'カット編集と基本テロップを担当。フレッシュな感性で登録者を増やす！',
+        baseCost: 100,
+        subsPerSec: 2,
+        icon: 'fa-graduation-cap',
+        color: 'text-emerald-500 bg-emerald-100 dark:bg-emerald-950/60',
+        unlockSubs: 0
+      },
+      {
+        id: 'smartphone',
+        name: 'スマホ編集マスター',
+        desc: 'CapCutを自在に操り、ショート動画を量産して新規層を惹きつける！',
+        baseCost: 500,
+        subsPerSec: 10,
+        icon: 'fa-mobile-screen-button',
+        color: 'text-sky-500 bg-sky-100 dark:bg-sky-950/60',
+        unlockSubs: 0
+      },
+      {
+        id: 'freelance',
+        name: 'フリーランス動画編集者',
+        desc: 'プロ仕様ソフトでテンポ抜群の編集を実現。視聴維持率が大幅アップ！',
+        baseCost: 2500,
+        subsPerSec: 45,
+        icon: 'fa-laptop-code',
+        color: 'text-indigo-500 bg-indigo-100 dark:bg-indigo-950/60',
+        unlockSubs: 30
+      },
+      {
+        id: 'thumbnail',
+        name: 'バズ狙いのサムネ職人',
+        desc: '思わずクリックしたくなる神サムネイルでインプレッション爆発！',
+        baseCost: 12000,
+        subsPerSec: 180,
+        icon: 'fa-wand-magic-sparkles',
+        color: 'text-pink-500 bg-pink-100 dark:bg-pink-950/60',
+        unlockSubs: 150
+      },
+      {
+        id: 'tv_director',
+        name: '元テレビ局ディレクター',
+        desc: '地上波レベルの企画構成と演出で幅広い世代のファンを獲得！',
+        baseCost: 60000,
+        subsPerSec: 750,
+        icon: 'fa-tv',
+        color: 'text-amber-500 bg-amber-100 dark:bg-amber-950/60',
+        unlockSubs: 800
+      },
+      {
+        id: 'producer',
+        name: '敏腕企画プロデューサー',
+        desc: 'トレンドを先読みした大型コラボや連続企画でチャンネルが急成長！',
+        baseCost: 300000,
+        subsPerSec: 3200,
+        icon: 'fa-clapperboard',
+        color: 'text-orange-500 bg-orange-100 dark:bg-orange-950/60',
+        unlockSubs: 4000
+      },
+      {
+        id: 'creative_team',
+        name: '専属クリエイティブチーム',
+        desc: '撮影・編集・音響・分析の精鋭集団が24時間体制で神動画を制作！',
+        baseCost: 1500000,
+        subsPerSec: 15000,
+        icon: 'fa-people-group',
+        color: 'text-purple-500 bg-purple-100 dark:bg-purple-950/60',
+        unlockSubs: 20000
+      },
+      {
+        id: 'ai_system',
+        name: '最新AI自動編集システム',
+        desc: '多言語翻訳吹き替え＆最適カットを瞬時に生成し世界中の視聴者を獲得！',
+        baseCost: 8000000,
+        subsPerSec: 75000,
+        icon: 'fa-robot',
+        color: 'text-cyan-500 bg-cyan-100 dark:bg-cyan-950/60',
+        unlockSubs: 100000
+      },
+      {
+        id: 'vfx_studio',
+        name: 'ハリウッド級VFXスタジオ',
+        desc: '映画さながらのCG・特撮映像で毎回の投稿が世界トレンド1位に！',
+        baseCost: 50000000,
+        subsPerSec: 400000,
+        icon: 'fa-film',
+        color: 'text-rose-500 bg-rose-100 dark:bg-rose-950/60',
+        unlockSubs: 500000
+      },
+      {
+        id: 'galactic_empire',
+        name: '銀河系メディア帝国',
+        desc: '全宇宙の衛星ネットワークへ同時配信！全銀河の生命体がチャンネル登録！',
+        baseCost: 300000000,
+        subsPerSec: 2500000,
+        icon: 'fa-satellite',
+        color: 'text-yellow-500 bg-yellow-100 dark:bg-yellow-950/60',
+        unlockSubs: 3000000
+      }
+    ];
+
+    const PROMOS_DATA = [
+      {
+        id: 'cafe',
+        name: '地元カフェの食レポ案件',
+        sponsor: '純喫茶モーニング',
+        desc: 'ふわふわパンケーキを全力食レポ！初めての企業案件で投稿パワーが2倍に！',
+        reqSubs: 50,
+        multiplier: 2,
+        bonusMoney: 300,
+        icon: 'fa-mug-hot'
+      },
+      {
+        id: 'mobile_game',
+        name: '新作スマホゲームのPR',
+        sponsor: 'ドラゴンパズル運営',
+        desc: '白熱のガチャ＆実況プレイ配信！広告単価が跳ね上がり投稿パワーがさらに2倍！',
+        reqSubs: 300,
+        multiplier: 2,
+        bonusMoney: 2000,
+        icon: 'fa-gamepad'
+      },
+      {
+        id: 'gadget',
+        name: '話題のガジェットレビュー',
+        sponsor: 'ネオテックジャパン',
+        desc: '最新ワイヤレスイヤホンの徹底検証動画が大好評！投稿パワーがさらに2倍！',
+        reqSubs: 1500,
+        multiplier: 2,
+        bonusMoney: 12000,
+        icon: 'fa-headphones'
+      },
+      {
+        id: 'apparel',
+        name: '大手アパレルブランドタイアップ',
+        sponsor: 'URBAN STYLE TOKYO',
+        desc: 'プロデュースコラボパーカーが即完売！ブランド価値向上で投稿パワーが2倍！',
+        reqSubs: 10000,
+        multiplier: 2,
+        bonusMoney: 80000,
+        icon: 'fa-shirt'
+      },
+      {
+        id: 'tv_cm',
+        name: '全国放送TVCM出演＆コラボ',
+        sponsor: '日本飲料株式会社',
+        desc: 'お茶の間でも大人気に！全国ネットCM効果で投稿パワーが一気に3倍！',
+        reqSubs: 100000,
+        multiplier: 3,
+        bonusMoney: 1000000,
+        icon: 'fa-tower-broadcast'
+      },
+      {
+        id: 'global_tech',
+        name: '世界規模テック企業のアンバサダー',
+        sponsor: 'GIGA OS Global',
+        desc: '世界発表会の公式ゲストに就任！グローバル案件で投稿パワーがさらに3倍！',
+        reqSubs: 1000000,
+        multiplier: 3,
+        bonusMoney: 15000000,
+        icon: 'fa-globe'
+      },
+      {
+        id: 'space_trip',
+        name: '宇宙旅行プロジェクト公式配信',
+        sponsor: 'STAR VOYAGE',
+        desc: '無重力空間からの生配信で歴史的視聴数を記録！投稿パワーが驚異の5倍！',
+        reqSubs: 10000000,
+        multiplier: 5,
+        bonusMoney: 200000000,
+        icon: 'fa-rocket'
+      },
+      {
+        id: 'earth_rep',
+        name: '地球代表クリエイター認定',
+        sponsor: '国際クリエイター連盟',
+        desc: '人類史上最も影響力のあるチャンネルに認定！投稿パワーが究極の10倍！',
+        reqSubs: 100000000,
+        multiplier: 10,
+        bonusMoney: 5000000000,
+        icon: 'fa-crown'
+      }
+    ];
+
+    const PLAQUES_DATA = [
+      {
+        id: 'silver',
+        name: '銀の盾',
+        reqSubs: 100000,
+        gradient: 'from-gray-200 via-slate-300 to-gray-400 text-gray-800 border-gray-300',
+        badgeColor: 'text-slate-400',
+        desc: 'チャンネル登録者 10万人 達成！シルバークリエイターアワードを獲得しました！'
+      },
+      {
+        id: 'gold',
+        name: '金の盾',
+        reqSubs: 1000000,
+        gradient: 'from-yellow-300 via-amber-400 to-yellow-600 text-amber-950 border-yellow-300',
+        badgeColor: 'text-amber-400',
+        desc: 'チャンネル登録者 100万人 達成！トップクリエイターの証、ゴールドの盾を獲得！'
+      },
+      {
+        id: 'diamond',
+        name: 'ダイヤの盾',
+        reqSubs: 10000000,
+        gradient: 'from-cyan-200 via-sky-300 to-indigo-400 text-indigo-950 border-cyan-200',
+        badgeColor: 'text-cyan-400',
+        desc: 'チャンネル登録者 1000万人 達成！日本トップクラスの伝説的チャンネルの証！'
+      },
+      {
+        id: 'ruby',
+        name: 'ルビーの盾',
+        reqSubs: 100000000,
+        gradient: 'from-red-500 via-rose-600 to-red-800 text-white border-rose-400',
+        badgeColor: 'text-yt-red',
+        desc: 'チャンネル登録者 1億人 達成！世界を制した究極のカスタムクリエイターアワード！'
+      }
+    ];
+
+    const VIDEO_TITLES = [
+      '【初投稿】本気でYouTube始めてみました！',
+      '100円ショップのアイテムだけで神動画作れるか検証！',
+      '【神回】編集ソフトを変えたらクオリティが激変した件ｗｗ',
+      '視聴者さんのコメントに全部返信してみた！',
+      '【重大発表】ついにあの企業様から案件が来ました！！',
+      '24時間動画編集し続けたら何本投稿できるのか？',
+      '【感謝】登録者突破記念！特別企画スペシャル！',
+      'プロの編集チームと最新AIで映画レベルの映像作ってみた',
+      '【世界初】宇宙からライブ配信やってみた結果…！',
+      'いつも応援してくれるみんなへ本当にありがとう！'
+    ];
+
+    const VIEWER_NAMES = [
+      'たかし＠毎日視聴', 'みさき🎀', 'ゲーム好きの高校生', '通りすがりの猫',
+      '編集勉強中マン', 'ラーメン二郎しか勝たん', '夜更かし常連組', '古参アピール勢',
+      'ケンタロウ', 'さくらんぼ🍒', 'クリエイター志望', 'カフェ巡り女子'
+    ];
+
+    // =========================================================================
+    // ゲーム状態管理 (State)
+    // =========================================================================
+    const SAVE_KEY = 'youtube_tycoon_save_v1';
+
+    let gameState = {
+      channelName: 'マイチャンネル公式',
+      subs: 0,
+      money: 0,
+      totalMoneyEarned: 0,
+      baseSubsPerSec: 1,
+      baseMoneyPerSec: 10,
+      totalVideos: 0,
+      editors: {},         // { student: 0, smartphone: 0, ... }
+      completedPromos: [], // ['cafe', ...]
+      unlockedPlaques: [], // ['silver', ...]
+      lastSaveTime: Date.now()
+    };
+
+    let settings = {
+      darkMode: false,
+      japaneseFormat: true,
+      soundEnabled: true,
+      buyMultiplier: 1,
+      activeTab: 'editors'
+    };
+
+    // =========================================================================
+    // サウンドエフェクト (Tone.js)
+    // =========================================================================
+    let synth = null;
+    let polySynth = null;
+
+    function initAudio() {
+      if (!synth && typeof Tone !== 'undefined') {
+        synth = new Tone.Synth({
+          oscillator: { type: 'triangle' },
+          envelope: { attack: 0.005, decay: 0.08, sustain: 0.01, release: 0.1 }
+        }).toDestination();
+        synth.volume.value = -12;
+
+        polySynth = new Tone.PolySynth(Tone.Synth).toDestination();
+        polySynth.volume.value = -10;
+      }
+    }
+
+    function playClickSound() {
+      if (!settings.soundEnabled) return;
+      try {
+        initAudio();
+        if (Tone.context.state !== 'running') Tone.start();
+        const notes = ['C5', 'D5', 'E5', 'G5'];
+        const note = notes[Math.floor(Math.random() * notes.length)];
+        synth.triggerAttackRelease(note, '32n');
+      } catch (e) {}
+    }
+
+    function playBuySound() {
+      if (!settings.soundEnabled) return;
+      try {
+        initAudio();
+        if (Tone.context.state !== 'running') Tone.start();
+        synth.triggerAttackRelease('E5', '16n');
+        setTimeout(() => synth.triggerAttackRelease('A5', '16n'), 60);
+      } catch (e) {}
+    }
+
+    function playFanfareSound() {
+      if (!settings.soundEnabled) return;
+      try {
+        initAudio();
+        if (Tone.context.state !== 'running') Tone.start();
+        const now = Tone.now();
+        polySynth.triggerAttackRelease(['C4', 'E4', 'G4'], '8n', now);
+        polySynth.triggerAttackRelease(['F4', 'A4', 'C5'], '8n', now + 0.14);
+        polySynth.triggerAttackRelease(['G4', 'B4', 'D5', 'G5'], '4n', now + 0.28);
+      } catch (e) {}
+    }
+
+    // =========================================================================
+    // 計算ロジック
+    // =========================================================================
+
+    // 現在の投稿パワー倍率（プロモーションの乗算合計）
+    function getPromoMultiplier() {
+      let mult = 1;
+      for (const promoId of gameState.completedPromos) {
+        const promo = PROMOS_DATA.find(p => p.id === promoId);
+        if (promo) mult *= promo.multiplier;
+      }
+      return mult;
+    }
+
+    // 現在の無料投稿パワー（1クリックあたりの秒間収益増加量）
+    function getClickPower() {
+      return 1 * getPromoMultiplier();
+    }
+
+    // 現在の秒間登録者増加数
+    function getSubsPerSec() {
+      let total = gameState.baseSubsPerSec; // 初期値 1人/秒
+      for (const ed of EDITORS_DATA) {
+        const count = gameState.editors[ed.id] || 0;
+        total += count * ed.subsPerSec;
+      }
+      return total;
+    }
+
+    // 現在の秒間収益
+    function getMoneyPerSec() {
+      return gameState.baseMoneyPerSec;
+    }
+
+    // 編集者の購入コスト計算（購入ごとに1.15倍上昇）
+    function getEditorCost(editor, amount = 1) {
+      const owned = gameState.editors[editor.id] || 0;
+      let totalCost = 0;
+      for (let i = 0; i < amount; i++) {
+        totalCost += Math.floor(editor.baseCost * Math.pow(1.15, owned + i));
+      }
+      return totalCost;
+    }
+
+    // =========================================================================
+    // 数値フォーマット関数
+    // =========================================================================
+    function formatNumber(num) {
+      const n = Math.floor(num);
+      if (!settings.japaneseFormat) {
+        return n.toLocaleString('ja-JP');
+      }
+      if (n < 10000) {
+        return n.toLocaleString('ja-JP');
+      }
+      const units = [
+        { value: 1e16, symbol: '京' },
+        { value: 1e12, symbol: '兆' },
+        { value: 1e8, symbol: '億' },
+        { value: 1e4, symbol: '万' }
+      ];
+      for (const u of units) {
+        if (n >= u.value) {
+          const val = n / u.value;
+          // 小数点以下2桁まで表示し、末尾の0を整理
+          const formatted = val >= 100 ? val.toFixed(1) : val.toFixed(2);
+          return parseFloat(formatted) + u.symbol;
+        }
+      }
+      return n.toLocaleString('ja-JP');
+    }
+
+    // =========================================================================
+    // アクション処理（無料投稿・編集者雇用・プロモーション受注）
+    // =========================================================================
+
+    // 無料投稿ボタンクリック処理
+    function handleFreeUpload(event) {
+      const power = getClickPower();
+      gameState.baseMoneyPerSec += power;
+      gameState.totalVideos += 1;
+
+      playClickSound();
+
+      // クリック位置にフローティングテキスト表示
+      const x = event.clientX || (event.touches && event.touches[0].clientX) || window.innerWidth / 2;
+      const y = event.clientY || (event.touches && event.touches[0].clientY) || window.innerHeight / 2;
+      spawnFloatingText(x, y, `+${formatNumber(power)} 円/秒！`);
+
+      // ときどき最新動画タイトル更新＆視聴者コメント追加
+      if (gameState.totalVideos === 1 || gameState.totalVideos % 10 === 0) {
+        const titleIdx = Math.min(Math.floor(gameState.totalVideos / 15), VIDEO_TITLES.length - 1);
+        document.getElementById('latest-video-title').textContent = `最新動画：「${VIDEO_TITLES[titleIdx]}」`;
+      }
+      if (Math.random() < 0.25) {
+        addRandomComment('upload');
+      }
+
+      updateUI();
+    }
+
+    // 編集者を雇用する
+    function buyEditor(editorId) {
+      const editor = EDITORS_DATA.find(e => e.id === editorId);
+      if (!editor) return;
+
+      const amount = settings.buyMultiplier;
+      const cost = getEditorCost(editor, amount);
+
+      if (gameState.money < cost) return;
+
+      gameState.money -= cost;
+      gameState.editors[editorId] = (gameState.editors[editorId] || 0) + amount;
+
+      playBuySound();
+      addRandomComment('editor', editor.name);
+      renderEditorsList();
+      updateUI();
+    }
+
+    // プロモーション（企業案件）を受ける
+    function acceptPromo(promoId) {
+      const promo = PROMOS_DATA.find(p => p.id === promoId);
+      if (!promo) return;
+      if (gameState.completedPromos.includes(promoId)) return;
+      if (gameState.subs < promo.reqSubs) return;
+
+      gameState.completedPromos.push(promoId);
+      gameState.money += promo.bonusMoney;
+      gameState.totalMoneyEarned += promo.bonusMoney;
+
+      playFanfareSound();
+      spawnConfetti();
+      showToast(
+        `企業案件「${promo.name}」達成！`,
+        `無料投稿パワーが ${promo.multiplier}倍 にアップ！特別報酬 +${formatNumber(promo.bonusMoney)}円 を獲得！`,
+        'amber'
+      );
+      addRandomComment('promo', promo.name);
+
+      renderPromosList();
+      updateUI();
+      saveGame();
+    }
+
+    // =========================================================================
+    // UI演出（フローティング文字・コメント欄・トースト・紙吹雪）
+    // =========================================================================
+
+    function spawnFloatingText(x, y, text) {
+      const el = document.createElement('div');
+      el.className = 'floating-text text-base sm:text-lg text-yellow-400';
+      // 少し左右に散らす
+      const offsetX = (Math.random() - 0.5) * 40;
+      el.style.left = `${x + offsetX}px`;
+      el.style.top = `${y - 15}px`;
+      el.textContent = text;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 850);
+    }
+
+    function spawnConfetti() {
+      const colors = ['#FF0000', '#FFD700', '#00E5FF', '#FF4081', '#76FF03'];
+      for (let i = 0; i < 45; i++) {
+        const piece = document.createElement('div');
+        piece.className = 'confetti-piece rounded-sm';
+        piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        piece.style.left = `${Math.random() * 100}vw`;
+        piece.style.top = `-10px`;
+        const duration = 1.5 + Math.random() * 1.5;
+        const drift = (Math.random() - 0.5) * 200;
+        piece.animate([
+          { transform: `translate(0, 0) rotate(0deg)`, opacity: 1 },
+          { transform: `translate(${drift}px, 100vh) rotate(${360 + Math.random() * 360}deg)`, opacity: 0.2 }
+        ], {
+          duration: duration * 1000,
+          easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+        });
+        document.body.appendChild(piece);
+        setTimeout(() => piece.remove(), duration * 1000);
+      }
+    }
+
+    function showToast(title, message, color = 'red') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      const borderClass = color === 'amber' ? 'border-amber-500' : 'border-yt-red';
+      const iconClass = color === 'amber' ? 'fa-handshake text-amber-500' : 'fa-circle-check text-yt-red';
+
+      toast.className = `pointer-events-auto bg-white dark:bg-yt-darkCard border-l-4 ${borderClass} rounded-2xl p-3.5 shadow-xl border border-gray-200 dark:border-gray-700 flex items-start gap-3 transition-all duration-300`;
+      toast.innerHTML = `
+        <i class="fa-solid ${iconClass} text-lg mt-0.5"></i>
+        <div class="flex-1 min-w-0">
+          <div class="font-black text-xs sm:text-sm text-gray-900 dark:text-white">${title}</div>
+          <div class="text-xs text-gray-600 dark:text-gray-300 mt-0.5">${message}</div>
+        </div>
+      `;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(20px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 4500);
+    }
+
+    function addRandomComment(type = 'general', extra = '') {
+      const feed = document.getElementById('comments-feed');
+      if (!feed) return;
+
+      const user = VIEWER_NAMES[Math.floor(Math.random() * VIEWER_NAMES.length)];
+      let text = '';
+
+      if (type === 'upload') {
+        const pool = [
+          'うぽつです！！今日も投稿ありがとう！',
+          '投稿頻度すごすぎて通知追いつかないｗ',
+          'この企画めっちゃ好き！高評価押しました👍',
+          'どんどん面白くなってる！応援してます！'
+        ];
+        text = pool[Math.floor(Math.random() * pool.length)];
+      } else if (type === 'editor') {
+        const pool = [
+          `「${extra}」が加わってから編集テンポ神すぎる！`,
+          'テロップのセンス最高ｗｗ腹抱えて笑った',
+          'クオリティ爆上がりしてて草！チャンネル登録しました！'
+        ];
+        text = pool[Math.floor(Math.random() * pool.length)];
+      } else if (type === 'promo') {
+        text = `「${extra}」おめでとうございます！！ついに大手案件だー！🎉`;
+      } else {
+        const pool = [
+          'おすすめから飛んできました！一気見してます！',
+          'ここ最近の伸び方エグくない！？',
+          '次の動画も楽しみにしてます！',
+          '仕事終わりの癒やしチャンネル✨'
+        ];
+        text = pool[Math.floor(Math.random() * pool.length)];
+      }
+
+      const colors = ['bg-red-500', 'bg-blue-500', 'bg-emerald-500', 'bg-purple-500', 'bg-amber-500', 'bg-pink-500'];
+      const avatarBg = colors[Math.floor(Math.random() * colors.length)];
+
+      const item = document.createElement('div');
+      item.className = 'comment-item flex items-start gap-2.5 text-xs bg-gray-50 dark:bg-yt-black/50 p-2 rounded-xl';
+      item.innerHTML = `
+        <div class="w-6 h-6 rounded-full ${avatarBg} text-white font-black flex items-center justify-center text-[10px] shrink-0">
+          ${user.charAt(0)}
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-1.5">
+            <span class="font-bold text-gray-700 dark:text-gray-300 truncate">${user}</span>
+            <span class="text-[10px] text-gray-400">たった今</span>
+          </div>
+          <p class="text-gray-800 dark:text-gray-200 mt-0.5 break-words">${text}</p>
+        </div>
+      `;
+
+      feed.prepend(item);
+      // 最大25件まで保持
+      while (feed.children.length > 25) {
+        feed.removeChild(feed.lastChild);
+      }
+    }
+
+    // =========================================================================
+    // クリエイターの盾チェック＆描画
+    // =========================================================================
+    function checkPlaques() {
+      let newlyUnlocked = false;
+      for (const plaque of PLAQUES_DATA) {
+        if (gameState.subs >= plaque.reqSubs && !gameState.unlockedPlaques.includes(plaque.id)) {
+          gameState.unlockedPlaques.push(plaque.id);
+          newlyUnlocked = true;
+          playFanfareSound();
+          spawnConfetti();
+          openPlaqueModal(plaque);
+        }
+      }
+      if (newlyUnlocked) {
+        renderPlaques();
+        saveGame();
+      }
+    }
+
+    function renderPlaques() {
+      const showcase = document.getElementById('plaques-showcase');
+      const headerPlaques = document.getElementById('header-plaques');
+      const countText = document.getElementById('plaque-count-text');
+
+      showcase.innerHTML = '';
+      headerPlaques.innerHTML = '<span class="text-xs font-bold text-gray-500 dark:text-gray-400 mr-1">盾:</span>';
+
+      PLAQUES_DATA.forEach(p => {
+        const unlocked = gameState.unlockedPlaques.includes(p.id);
+
+        // スタジオ内の盾カード
+        const card = document.createElement('div');
+        card.className = unlocked
+          ? `p-2 rounded-xl bg-gradient-to-br ${p.gradient} border text-center shadow-sm transition transform hover:scale-105`
+          : `p-2 rounded-xl bg-gray-100 dark:bg-yt-black border border-gray-200 dark:border-gray-800 text-center opacity-45`;
+        card.innerHTML = `
+          <i class="fa-solid fa-award text-base sm:text-lg mb-0.5 block"></i>
+          <div class="text-[10px] font-black truncate">${p.name}</div>
+          <div class="text-[9px] font-num opacity-80">${formatNumber(p.reqSubs)}</div>
+        `;
+        showcase.appendChild(card);
+
+        // ヘッダーのミニアイコン
+        const mini = document.createElement('span');
+        mini.title = `${p.name} (${formatNumber(p.reqSubs)}人)`;
+        mini.className = unlocked ? `${p.badgeColor} text-sm` : 'text-gray-300 dark:text-gray-700 text-sm';
+        mini.innerHTML = '<i class="fa-solid fa-award"></i>';
+        headerPlaques.appendChild(mini);
+      });
+
+      countText.textContent = `${gameState.unlockedPlaques.length} / ${PLAQUES_DATA.length} 獲得`;
+
+      // 10万人以上で認証バッジ点灯
+      const verified = document.getElementById('verified-badge');
+      if (gameState.subs >= 100000) {
+        verified.className = 'fa-solid fa-circle-check text-blue-500 text-xs';
+      } else {
+        verified.className = 'fa-solid fa-circle-check text-gray-400 text-xs';
+      }
+    }
+
+    function openPlaqueModal(plaque) {
+      document.getElementById('plaque-modal-title').textContent = `${plaque.name} 獲得！`;
+      document.getElementById('plaque-modal-desc').textContent = plaque.desc;
+      const iconBox = document.getElementById('plaque-modal-icon');
+      iconBox.className = `w-24 h-24 mx-auto my-3 rounded-2xl flex items-center justify-center text-5xl shadow-lg bg-gradient-to-br ${plaque.gradient}`;
+      iconBox.innerHTML = '<i class="fa-solid fa-award"></i>';
+
+      const modal = document.getElementById('plaque-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closePlaqueModal() {
+      const modal = document.getElementById('plaque-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    // =========================================================================
+    // 編集者リスト ＆ プロモーションリストの描画
+    // =========================================================================
+
+    function renderEditorsList() {
+      const container = document.getElementById('editors-list');
+      container.innerHTML = '';
+      const mult = settings.buyMultiplier;
+
+      EDITORS_DATA.forEach((ed, index) => {
+        const owned = gameState.editors[ed.id] || 0;
+        // 段階的解放：前の編集者を1人雇っているか、必要登録者数の半分に達していれば表示
+        const prevEditor = index > 0 ? EDITORS_DATA[index - 1] : null;
+        const prevOwned = prevEditor ? (gameState.editors[prevEditor.id] || 0) > 0 : true;
+        const isUnlocked = index < 2 || prevOwned || gameState.subs >= ed.unlockSubs * 0.5 || owned > 0;
+
+        if (!isUnlocked) {
+          const lockedCard = document.createElement('div');
+          lockedCard.className = 'p-3.5 rounded-2xl bg-gray-100/70 dark:bg-yt-black/50 border border-dashed border-gray-300 dark:border-gray-800 flex items-center justify-between text-gray-400';
+          lockedCard.innerHTML = `
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-xl bg-gray-200 dark:bg-gray-800 flex items-center justify-center">
+                <i class="fa-solid fa-lock"></i>
+              </div>
+              <div>
+                <div class="font-bold text-xs sm:text-sm">？？？ 編集者</div>
+                <div class="text-[11px]">前のランクの編集者を雇うか登録者 ${formatNumber(ed.unlockSubs)}人で解放</div>
+              </div>
+            </div>
+          `;
+          container.appendChild(lockedCard);
+          return;
+        }
+
+        const cost = getEditorCost(ed, mult);
+        const canAfford = gameState.money >= cost;
+        const totalBoost = ed.subsPerSec * mult;
+
+        const card = document.createElement('div');
+        card.className = `p-3 sm:p-3.5 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+          canAfford
+            ? 'bg-white dark:bg-yt-darkHover border-gray-200 dark:border-gray-700 shadow-sm hover:border-yt-red/50'
+            : 'bg-gray-50/70 dark:bg-yt-black/40 border-gray-200/70 dark:border-gray-800/80'
+        }`;
+
+        card.innerHTML = `
+          <div class="flex items-start sm:items-center gap-3 flex-1 min-w-0">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl ${ed.color} flex items-center justify-center text-lg sm:text-xl shrink-0">
+              <i class="fa-solid ${ed.icon}"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <h3 class="font-black text-sm text-gray-900 dark:text-white truncate">${ed.name}</h3>
+                <span class="px-2 py-0.5 rounded-full text-[11px] font-black bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-num">
+                  Lv.${owned}
+                </span>
+              </div>
+              <p class="text-[11px] text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5">${ed.desc}</p>
+              <div class="flex items-center gap-3 mt-1 text-xs font-bold">
+                <span class="text-yt-red font-num">+${formatNumber(ed.subsPerSec)} 人/秒</span>
+                ${owned > 0 ? `<span class="text-gray-400 text-[11px] font-num">(合計: +${formatNumber(ed.subsPerSec * owned)} 人/秒)</span>` : ''}
+              </div>
+            </div>
+          </div>
+
+          <button onclick="buyEditor('${ed.id}')" ${!canAfford ? 'disabled' : ''}
+            class="w-full sm:w-auto sm:min-w-[135px] py-2.5 px-3.5 rounded-xl font-black text-xs transition-all flex flex-col items-center justify-center shrink-0 touch-manipulation ${
+              canAfford
+                ? 'bg-yt-red hover:bg-yt-darkRed active:scale-95 text-white shadow-md shadow-red-600/20 cursor-pointer'
+                : 'bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+            }">
+            <span class="text-[10px] opacity-90">${mult > 1 ? `${mult}人まとめて雇用` : '雇用する'} (+${formatNumber(totalBoost)}人/秒)</span>
+            <span class="text-sm font-num mt-0.5">${formatNumber(cost)} 円</span>
+          </button>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function renderPromosList() {
+      const container = document.getElementById('promos-list');
+      container.innerHTML = '';
+
+      PROMOS_DATA.forEach(promo => {
+        const isCompleted = gameState.completedPromos.includes(promo.id);
+        const isAvailable = !isCompleted && gameState.subs >= promo.reqSubs;
+        const progress = Math.min(100, (gameState.subs / promo.reqSubs) * 100);
+
+        const card = document.createElement('div');
+        card.className = `p-3.5 sm:p-4 rounded-2xl border transition-all ${
+          isCompleted
+            ? 'bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/50 opacity-80'
+            : isAvailable
+              ? 'bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/30 border-amber-400 dark:border-amber-600 shadow-md'
+              : 'bg-gray-50 dark:bg-yt-black/40 border-gray-200 dark:border-gray-800'
+        }`;
+
+        card.innerHTML = `
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-start gap-3 flex-1 min-w-0">
+              <div class="w-11 h-11 rounded-2xl flex items-center justify-center text-lg shrink-0 ${
+                isCompleted
+                  ? 'bg-emerald-500 text-white'
+                  : isAvailable
+                    ? 'bg-amber-500 text-white animate-pulse'
+                    : 'bg-gray-200 dark:bg-gray-800 text-gray-500'
+              }">
+                <i class="fa-solid ${isCompleted ? 'fa-check' : promo.icon}"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="text-[10px] font-black px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
+                    提供: ${promo.sponsor}
+                  </span>
+                  <span class="text-xs font-black text-amber-600 dark:text-amber-400">
+                    投稿パワー ${promo.multiplier}倍！
+                  </span>
+                </div>
+                <h3 class="font-black text-sm sm:text-base text-gray-900 dark:text-white mt-1">${promo.name}</h3>
+                <p class="text-xs text-gray-600 dark:text-gray-400 mt-0.5">${promo.desc}</p>
+                <div class="mt-1.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 font-num">
+                  <i class="fa-solid fa-gift mr-1"></i>達成ボーナス: +${formatNumber(promo.bonusMoney)} 円
+                </div>
+              </div>
+            </div>
+
+            <div class="w-full sm:w-auto sm:min-w-[140px] shrink-0">
+              ${
+                isCompleted
+                  ? `<div class="w-full py-2.5 px-3 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-black text-xs text-center">
+                      <i class="fa-solid fa-circle-check mr-1"></i>案件完了済み
+                    </div>`
+                  : isAvailable
+                    ? `<button onclick="acceptPromo('${promo.id}')"
+                        class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 active:scale-95 text-white font-black text-xs shadow-lg shadow-amber-500/30 transition cursor-pointer touch-manipulation">
+                        <i class="fa-solid fa-handshake mr-1"></i>案件を受ける！
+                      </button>`
+                    : `<div class="bg-gray-200/70 dark:bg-gray-800 p-2.5 rounded-xl text-center">
+                        <div class="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-1">
+                          条件: 登録者 <span class="font-num text-gray-800 dark:text-gray-200">${formatNumber(promo.reqSubs)}人</span>
+                        </div>
+                        <div class="w-full bg-gray-300 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
+                          <div class="bg-yt-red h-1.5 rounded-full" style="width: ${progress}%"></div>
+                        </div>
+                      </div>`
+              }
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // =========================================================================
+    // 全体UI更新
+    // =========================================================================
+    function updateUI() {
+      const subsPerSec = getSubsPerSec();
+      const moneyPerSec = getMoneyPerSec();
+      const clickPower = getClickPower();
+      const promoMult = getPromoMultiplier();
+
+      // 基本ステータス表示
+      document.getElementById('stat-subs').innerHTML = `${formatNumber(gameState.subs)}<span class="text-sm font-bold ml-1">人</span>`;
+      document.getElementById('stat-subs-rate').textContent = `+${formatNumber(subsPerSec)} 人/秒`;
+
+      document.getElementById('stat-money').innerHTML = `${formatNumber(gameState.money)}<span class="text-sm font-bold ml-1">円</span>`;
+      document.getElementById('stat-money-rate').textContent = `+${formatNumber(moneyPerSec)} 円/秒`;
+
+      document.getElementById('stat-click-power').innerHTML = `+${formatNumber(clickPower)} <span class="text-xs font-bold">円/秒 UP</span>`;
+      document.getElementById('stat-multiplier').textContent = `倍率 ${formatNumber(promoMult)}x`;
+      document.getElementById('btn-power-text').textContent = `+${formatNumber(clickPower)} 円/秒`;
+
+      document.getElementById('stat-total-videos').textContent = `${formatNumber(gameState.totalVideos)}本`;
+      document.getElementById('channel-name-display').textContent = gameState.channelName;
+
+      // 次の盾進捗＆チャンネルランク
+      const nextPlaque = PLAQUES_DATA.find(p => gameState.subs < p.reqSubs);
+      if (nextPlaque) {
+        const pct = Math.min(100, (gameState.subs / nextPlaque.reqSubs) * 100);
+        document.getElementById('next-plaque-name').textContent = `${nextPlaque.name} (${formatNumber(nextPlaque.reqSubs)}人)`;
+        document.getElementById('next-plaque-bar').style.width = `${pct}%`;
+        document.getElementById('next-plaque-percent').textContent = `${pct.toFixed(1)}%`;
+      } else {
+        document.getElementById('next-plaque-name').textContent = '全クリエイターの盾 制覇！';
+        document.getElementById('next-plaque-bar').style.width = '100%';
+        document.getElementById('next-plaque-percent').textContent = 'MAX';
+      }
+
+      // チャンネルランク称号
+      let rankTitle = '駆け出し投稿者';
+      if (gameState.subs >= 100000000) rankTitle = '地球代表レジェンド';
+      else if (gameState.subs >= 10000000) rankTitle = '国民的トップYouTuber';
+      else if (gameState.subs >= 1000000) rankTitle = 'ミリオンクリエイター';
+      else if (gameState.subs >= 100000) rankTitle = '人気YouTuber';
+      else if (gameState.subs >= 10000) rankTitle = '中堅クリエイター';
+      else if (gameState.subs >= 1000) rankTitle = '収益化達成チャンネル';
+      document.getElementById('channel-rank-title').textContent = rankTitle;
+
+      // 購入可能バッジ数の更新
+      let affordableCount = 0;
+      EDITORS_DATA.forEach((ed, idx) => {
+        const owned = gameState.editors[ed.id] || 0;
+        const prevOwned = idx > 0 ? (gameState.editors[EDITORS_DATA[idx - 1].id] || 0) > 0 : true;
+        const isUnlocked = idx < 2 || prevOwned || gameState.subs >= ed.unlockSubs * 0.5 || owned > 0;
+        if (isUnlocked && gameState.money >= getEditorCost(ed, settings.buyMultiplier)) {
+          affordableCount++;
+        }
+      });
+
+      const edBadge = document.getElementById('badge-editors-affordable');
+      if (affordableCount > 0) {
+        edBadge.textContent = affordableCount;
+        edBadge.classList.remove('hidden');
+      } else {
+        edBadge.classList.add('hidden');
+      }
+
+      // 受注可能な企業案件バッジ
+      const availablePromos = PROMOS_DATA.filter(p => !gameState.completedPromos.includes(p.id) && gameState.subs >= p.reqSubs).length;
+      const promoBadge = document.getElementById('badge-promos-available');
+      if (availablePromos > 0) {
+        promoBadge.textContent = `${availablePromos}件`;
+        promoBadge.classList.remove('hidden');
+      } else {
+        promoBadge.classList.add('hidden');
+      }
+
+      // アクティブタブのリストボタン有効/無効状態を軽量更新
+      if (settings.activeTab === 'editors') {
+        renderEditorsList();
+      } else {
+        renderPromosList();
+      }
+    }
+
+    // =========================================================================
+    // タブ・設定コントロール
+    // =========================================================================
+    function switchTab(tab) {
+      settings.activeTab = tab;
+      const tabEd = document.getElementById('tab-editors');
+      const tabPr = document.getElementById('tab-promos');
+      const panelEd = document.getElementById('panel-editors');
+      const panelPr = document.getElementById('panel-promos');
+
+      if (tab === 'editors') {
+        tabEd.className = 'py-2.5 px-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all bg-white dark:bg-yt-darkCard text-yt-red shadow-sm';
+        tabPr.className = 'py-2.5 px-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all text-gray-600 dark:text-gray-400 hover:bg-white/50 dark:hover:bg-yt-darkHover';
+        panelEd.classList.remove('hidden');
+        panelPr.classList.add('hidden');
+        renderEditorsList();
+      } else {
+        tabPr.className = 'py-2.5 px-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all bg-white dark:bg-yt-darkCard text-yt-red shadow-sm';
+        tabEd.className = 'py-2.5 px-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all text-gray-600 dark:text-gray-400 hover:bg-white/50 dark:hover:bg-yt-darkHover';
+        panelPr.classList.remove('hidden');
+        panelEd.classList.add('hidden');
+        renderPromosList();
+      }
+    }
+
+    function setBuyMultiplier(mult) {
+      settings.buyMultiplier = mult;
+      document.getElementById('buy-mult-1').className = mult === 1
+        ? 'px-2.5 py-1 rounded-lg text-xs font-black bg-yt-red text-white transition'
+        : 'px-2.5 py-1 rounded-lg text-xs font-black text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition';
+      document.getElementById('buy-mult-10').className = mult === 10
+        ? 'px-2.5 py-1 rounded-lg text-xs font-black bg-yt-red text-white transition'
+        : 'px-2.5 py-1 rounded-lg text-xs font-black text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition';
+      renderEditorsList();
+    }
+
+    function toggleTheme() {
+      settings.darkMode = !settings.darkMode;
+      applyTheme();
+      saveSettings();
+    }
+
+    function applyTheme() {
+      const html = document.documentElement;
+      const icon = document.getElementById('theme-icon');
+      if (settings.darkMode) {
+        html.classList.add('dark');
+        icon.className = 'fa-solid fa-sun text-amber-400 text-xs';
+      } else {
+        html.classList.remove('dark');
+        icon.className = 'fa-solid fa-moon text-xs';
+      }
+    }
+
+    function toggleNumberFormat() {
+      settings.japaneseFormat = !settings.japaneseFormat;
+      document.getElementById('format-label').textContent = settings.japaneseFormat ? '万・億表記' : 'カンマ表記';
+      renderPlaques();
+      updateUI();
+      saveSettings();
+    }
+
+    function toggleSound() {
+      settings.soundEnabled = !settings.soundEnabled;
+      document.getElementById('sound-icon').className = settings.soundEnabled
+        ? 'fa-solid fa-volume-high text-xs'
+        : 'fa-solid fa-volume-xmark text-gray-400 text-xs';
+      saveSettings();
+    }
+
+    // 設定モーダル制御
+    function openSettingsModal() {
+      document.getElementById('input-channel-name').value = gameState.channelName;
+      document.getElementById('modal-total-money').textContent = `${formatNumber(gameState.totalMoneyEarned)} 円`;
+      document.getElementById('modal-total-videos').textContent = `${formatNumber(gameState.totalVideos)} 本`;
+      const totalEd = Object.values(gameState.editors).reduce((a, b) => a + b, 0);
+      document.getElementById('modal-total-editors').textContent = `${formatNumber(totalEd)} 人`;
+      document.getElementById('modal-total-promos').textContent = `${gameState.completedPromos.length} / ${PROMOS_DATA.length} 件`;
+
+      cancelResetConfirm();
+      const modal = document.getElementById('settings-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeSettingsModal() {
+      const modal = document.getElementById('settings-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function saveChannelName() {
+      const val = document.getElementById('input-channel-name').value.trim();
+      if (val) {
+        gameState.channelName = val;
+        updateUI();
+        saveGame();
+        showToast('チャンネル名を変更しました', `新しいチャンネル名: ${val}`, 'red');
+      }
+    }
+
+    function showResetConfirm() {
+      document.getElementById('btn-reset-step1').classList.add('hidden');
+      document.getElementById('reset-step2').classList.remove('hidden');
+    }
+
+    function cancelResetConfirm() {
+      document.getElementById('btn-reset-step1').classList.remove('hidden');
+      document.getElementById('reset-step2').classList.add('hidden');
+    }
+
+    function executeReset() {
+      localStorage.removeItem(SAVE_KEY);
+      gameState = {
+        channelName: 'あいうえおチャンネル',
+        subs: 0,
+        money: 0,
+        totalMoneyEarned: 0,
+        baseSubsPerSec: 1,
+        baseMoneyPerSec: 10,
+        totalVideos: 0,
+        editors: {},
+        completedPromos: [],
+        unlockedPlaques: [],
+        lastSaveTime: Date.now()
+      };
+      closeSettingsModal();
+      renderPlaques();
+      renderEditorsList();
+      renderPromosList();
+      updateUI();
+      showToast('データを初期化しました', '新しいチャンネルでゼロからスタート！', 'red');
+    }
+
+    // =========================================================================
+    // セーブ＆ロード（オフライン収益計算付き）
+    // =========================================================================
+    function saveGame() {
+      try {
+        gameState.lastSaveTime = Date.now();
+        localStorage.setItem(SAVE_KEY, JSON.stringify(gameState));
+      } catch (e) {
+        console.error('Save failed:', e);
+      }
+    }
+
+    function manualSave() {
+      saveGame();
+      showToast('セーブ完了', '現在の進行状況をブラウザに保存しました！', 'red');
+    }
+
+    function saveSettings() {
+      try {
+        localStorage.setItem(SAVE_KEY + '_settings', JSON.stringify(settings));
+      } catch (e) {}
+    }
+
+    function loadGame() {
+      try {
+        const savedSettings = localStorage.getItem(SAVE_KEY + '_settings');
+        if (savedSettings) {
+          settings = { ...settings, ...JSON.parse(savedSettings) };
+        }
+        applyTheme();
+        document.getElementById('format-label').textContent = settings.japaneseFormat ? '万・億表記' : 'カンマ表記';
+        document.getElementById('sound-icon').className = settings.soundEnabled
+          ? 'fa-solid fa-volume-high text-xs'
+          : 'fa-solid fa-volume-xmark text-gray-400 text-xs';
+
+        const saved = localStorage.getItem(SAVE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          gameState = { ...gameState, ...parsed };
+
+          // オフライン放置収益の計算（最大12時間分まで）
+          const now = Date.now();
+          const elapsedSec = Math.min(43200, Math.floor((now - (gameState.lastSaveTime || now)) / 1000));
+          if (elapsedSec >= 10) {
+            const offlineSubs = getSubsPerSec() * elapsedSec;
+            const offlineMoney = getMoneyPerSec() * elapsedSec;
+            gameState.subs += offlineSubs;
+            gameState.money += offlineMoney;
+            gameState.totalMoneyEarned += offlineMoney;
+
+            setTimeout(() => {
+              showToast(
+                `おかえりなさい！（オフライン報酬）`,
+                `不在中(${Math.floor(elapsedSec / 60)}分)に 登録者 +${formatNumber(offlineSubs)}人、収益 +${formatNumber(offlineMoney)}円 を獲得！`,
+                'amber'
+              );
+            }, 600);
+          }
+        }
+      } catch (e) {
+        console.error('Load failed:', e);
+      }
+    }
+
+    // =========================================================================
+    // メインゲームループ（100ms刻みで滑らかに増加）
+    // =========================================================================
+    let commentTimer = 0;
+    let saveTimer = 0;
+
+    function startGameLoop() {
+      let lastTick = Date.now();
+
+      setInterval(() => {
+        const now = Date.now();
+        const dt = (now - lastTick) / 1000; // 秒単位の経過時間
+        lastTick = now;
+
+        const subsGain = getSubsPerSec() * dt;
+        const moneyGain = getMoneyPerSec() * dt;
+
+        gameState.subs += subsGain;
+        gameState.money += moneyGain;
+        gameState.totalMoneyEarned += moneyGain;
+
+        checkPlaques();
+        updateUI();
+
+        // 定期的に視聴者コメントを流す
+        commentTimer += dt;
+        if (commentTimer >= 4.5) {
+          commentTimer = 0;
+          addRandomComment('general');
+        }
+
+        // 10秒ごとにオートセーブ
+        saveTimer += dt;
+        if (saveTimer >= 10) {
+          saveTimer = 0;
+          saveGame();
+        }
+      }, 100);
+    }
+
+    // =========================================================================
+    // 初期化処理
+    // =========================================================================
+    window.addEventListener('DOMContentLoaded', () => {
+      loadGame();
+      renderPlaques();
+      renderEditorsList();
+      renderPromosList();
+      updateUI();
+
+      // 初期コメント
+      addRandomComment('general');
+
+      // 無料投稿ボタンのイベント登録（クリック＆タッチ対応）
+      const uploadBtn = document.getElementById('btn-free-upload');
+      uploadBtn.addEventListener('click', handleFreeUpload);
+
+      startGameLoop();
+    });
+
+    // ページを閉じる前に保存
+    window.addEventListener('beforeunload', () => {
+      saveGame();
+    });
+  </script>
+</body>
+</html>
+```
+<script>
+  // ページが完全に読み込まれたあとに、外側から機能を「付け足す」！
+  window.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+      const nameDisplay = document.getElementById('channel-name-display');
+      if (nameDisplay) {
+        // カーソルをポインターにして、ホバーしたら赤く光るようにスタイルを追加
+        nameDisplay.style.cursor = 'pointer';
+        nameDisplay.title = 'クリックしてチャンネル名を変更！';
+        
+        // クリックされたときの処理を外側からゴリッと追加
+        nameDisplay.addEventListener('click', () => {
+          const newName = prompt('新しいチャンネル名を入力してくれ！', gameState.channelName);
+          if (newName !== null) {
+            const trimmed = newName.trim();
+            if (trimmed.length > 0) {
+              gameState.channelName = trimmed;
+              updateUI();
+              saveGame();
+              showToast('チャンネル名を変更したぜ！', `新しい名前：${trimmed}`, 'red');
+            }
+          }
+        });
+      }
+    }, 200);
+  });
+</script>
